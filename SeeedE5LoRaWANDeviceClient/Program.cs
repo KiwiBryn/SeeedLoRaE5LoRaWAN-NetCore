@@ -22,13 +22,11 @@
 //    RESET for retun device to factory settings
 //
 //---------------------------------------------------------------------------------
-namespace devMobile.IoT.NetCore.SeeedE5LoRa.LoRaWanDeviceClient
+namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 {
-   using System;
+	using System;
    using System.Diagnostics;
    using System.Threading;
-
-   using devMobile.IoT.LoRaWan;
 
    public class Program
    {
@@ -50,7 +48,7 @@ namespace devMobile.IoT.NetCore.SeeedE5LoRa.LoRaWanDeviceClient
       {
          Result result;
 
-         Debug.WriteLine("devMobile.IoT.SeeedE5LoRaWANDeviceClient starting");
+         Debug.WriteLine("devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5 DeviceClient starting");
 
          try
          {

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
-    <RootNamespace>devMobile.IoT.NetCore.SeeedE5LoRa.LoRaWanDeviceClient</RootNamespace>
+    <RootNamespace>devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5</RootNamespace>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

@@ -1,5 +1,5 @@
 ﻿//---------------------------------------------------------------------------------
-// Copyright (c) May 2021, devMobile Software
+// Copyright (c) September 2021, devMobile Software
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,10 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// must have one of OTAA or ABP in nfprroj file
 //---------------------------------------------------------------------------------
-namespace devMobile.IoT.NetCore.SeeedE5LoRa.LoRaWanDeviceClient
-{
+namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
+{ 
    using System;
 
    public class Config
