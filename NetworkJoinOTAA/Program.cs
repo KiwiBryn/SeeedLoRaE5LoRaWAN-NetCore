@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 //---------------------------------------------------------------------------------
-namespace devMobile.IoT.NetCore.SeeedLoRaE5.NetworkJoinOTAA
+namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 {
 	using System;
 	using System.Diagnostics;
