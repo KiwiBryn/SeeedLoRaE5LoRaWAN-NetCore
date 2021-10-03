@@ -17,7 +17,9 @@
 namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 {
 	using System;
+#if DIAGNOSTICS
 	using System.Diagnostics;
+#endif
 	using System.IO.Ports;
 	using System.Text;
 	using System.Threading;
@@ -139,8 +141,6 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 
 	public class SeeedE5LoRaWANDevice : IDisposable
 	{
-		public const ushort BaudRateMinimum = 1200;
-		public const ushort BaudRateMaximum = 57600;
 		public const ushort RegionIDLength = 5;
 		public const ushort AppEuiLength = 23;
 		public const ushort AppKeyLength = 32;
@@ -172,17 +172,23 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 			this.atExpectedEvent = new AutoResetEvent(false);
 		}
 
+		/// <summary>
+		/// Initializes a new instance of the devMobile.IoT.LoRaWAN.NetCore.RAK3172.Rak3172LoRaWanDevice class using the
+		/// specified port name, baud rate, parity bit, data bits, and stop bit.
+		/// </summary>
+		/// <param name="serialPortId">The port to use (for example, COM1).</param>
+		/// <param name="baudRate">The baud rate, 600 to 115K2.</param>
+		/// <param name="serialParity">One of the System.IO.Ports.SerialPort.Parity values, defaults to None.</param>
+		/// <param name="dataBits">The data bits value, defaults to 8.</param>
+		/// <param name="stopBits">One of the System.IO.Ports.SerialPort.StopBits values, defaults to One.</param>
+		/// <exception cref="System.IO.IOException">The serial port could not be found or opened.</exception>
+		/// <exception cref="UnauthorizedAccessException">The application does not have the required permissions to open the serial port.</exception>
+		/// <exception cref="ArgumentNullException">The serialPortId is null.</exception>
+		/// <exception cref="ArgumentException">The specified serialPortId, baudRate, serialParity, dataBits, or stopBits is invalid.</exception>
+		/// <exception cref="InvalidOperationException">The attempted operation was invalid e.g. the port was already open.</exception>
+		/// <returns><see cref="Result"/> of the operation.</returns>
 		public Result Initialise(string serialPortId, int baudRate, Parity serialParity = Parity.None, ushort dataBits = 8, StopBits stopBitCount = StopBits.One)
 		{
-			if ((serialPortId == null) || (serialPortId == ""))
-			{
-				throw new ArgumentException("Invalid SerialPortId", nameof(serialPortId));
-			}
-			if ((baudRate < BaudRateMinimum) || (baudRate > BaudRateMaximum))
-			{
-				throw new ArgumentException("Invalid BaudRate", nameof(baudRate));
-			}
-
 			serialDevice = new SerialPort(serialPortId);
 
 			// set parameters
@@ -205,12 +211,27 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 			CommandResponsesProcessorThread = new Thread(SerialPortProcessor);
 			CommandResponsesProcessorThread.Start();
 
+#if DIAGNOSTICS
+         Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} AT+NWM=1");
+#endif
 			// Ignoring the return from this is intentional
-			this.SendCommand("+LOWPOWER: WAKEUP", "AT+LOWPOWER: WAKEUP");
+			Result result = SendCommand("+LOWPOWER: WAKEUP", "AT+LOWPOWER: WAKEUP");
+			if (result != Result.Success)
+			{
+#if DIAGNOSTICS
+            Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} AT+LOWPOWER: WAKEUP failed {result}");
+#endif
+			}
 
 			return Result.Success;
 		}
 
+		/// <summary>
+		/// Sets the LoRaWAN device class.
+		/// </summary>
+		/// <param name="loRaClass" cref="LoRaWANDeviceClass">The LoRaWAN device class</param>
+		/// <exception cref="System.IO.ArgumentException">The loRaClass is invalid.</exception>
+		/// <returns><see cref="Result"/> of the operation.</returns>
 		public Result Class(LoRaWANDeviceClass loRaClass)
 		{
 			string command;
@@ -617,7 +638,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 
 			// Send message the network
 #if DIAGNOSTICS
-			Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} Send payload {BytesToBcd(payload)}");
+			Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} Send payload {BytesToBcd(payloadBytes)}");
 #endif
 			return Send(BytesToBcd(payloadBytes), confirmed);
 		}
