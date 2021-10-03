@@ -25,18 +25,19 @@
 namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 {
 	using System;
-   using System.Diagnostics;
-   using System.Threading;
+	using System.IO.Ports;
+	using System.Threading;
+
 
    public class Program
    {
       private const string SerialPortId = "/dev/ttyS0";
+      private const LoRaClass Class = LoRaClass.A;
       private const string Region = "AS923";
-      private static readonly TimeSpan JoinTimeOut = new TimeSpan(0, 0, 20);
-      private static readonly TimeSpan SendTimeout = new TimeSpan(0, 0, 15);
-
       private const byte MessagePort = 15;
-
+      private static readonly TimeSpan MessageSendTimerDue = new TimeSpan(0, 0, 15);
+      private static readonly TimeSpan MessageSendTimerPeriod = new TimeSpan(0, 5, 0);
+      private static Timer MessageSendTimer;
 #if PAYLOAD_BCD
       private const string PayloadBcd = "010203040506070809";
 #endif
@@ -48,144 +49,168 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
       {
          Result result;
 
-         Debug.WriteLine("devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5 DeviceClient starting");
+         Console.WriteLine("devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5 DeviceClient starting");
+
+         Console.WriteLine($"Serial ports:{String.Join(",", SerialPort.GetPortNames())}");
 
          try
          {
             using (SeeedE5LoRaWANDevice device = new SeeedE5LoRaWANDevice())
             {
-               result = device.Initialise(SerialPortId, 9600);
+               result = device.Initialise(SerialPortId, 9600, Parity.None, 8, StopBits.One);
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"Initialise failed {result}");
+                  Console.WriteLine($"Initialise failed {result}");
                   return;
                }
 
-#if CONFIRMED
-               device.OnMessageConfirmation += OnMessageConfirmationHandler;
-#endif
+               MessageSendTimer = new Timer(SendMessageTimerCallback, device, Timeout.Infinite, Timeout.Infinite);
+
+               device.OnJoinCompletion += OnJoinCompletionHandler;
                device.OnReceiveMessage += OnReceiveMessageHandler;
+#if CONFIRMED
+					device.OnMessageConfirmation += OnMessageConfirmationHandler;
+#endif
+
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Class {Class}");
+               result = device.Class(Class);
+               if (result != Result.Success)
+               {
+                  Console.WriteLine($"Class failed {result}");
+                  return;
+               }
+
 #if RESET
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Reset");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Reset");
                result = device.Reset();
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"Reset failed {result}");
+                  Console.WriteLine($"Reset failed {result}");
                   return;
                }
 #endif
 
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Region {Region}");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Region {Region}");
                result = device.Region(Region);
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"Region failed {result}");
+                  Console.WriteLine($"Region failed {result}");
                   return;
                }
 
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} ADR On");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} ADR On");
                result = device.AdrOn();
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"ADR on failed {result}");
+                  Console.WriteLine($"ADR on failed {result}");
                   return;
                }
 
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Port {MessagePort}");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Port {MessagePort}");
                result = device.Port(MessagePort);
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"Port on failed {result}");
+                  Console.WriteLine($"Port on failed {result}");
                   return;
                }
 
 #if OTAA
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} OTAA");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} OTAA");
                result = device.OtaaInitialise(Config.AppEui, Config.AppKey);
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"OTAA Initialise failed {result}");
+                  Console.WriteLine($"OTAA Initialise failed {result}");
                   return;
                }
 #endif
 
 #if ABP
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} ABP");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} ABP");
                result = device.AbpInitialise(Config.DevAddress, Config.NwksKey, Config.AppsKey);
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"ABP Initialise failed {result}");
+                  Console.WriteLine($"ABP Initialise failed {result}");
                   return;
                }
 #endif
 
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Join start Timeout:{JoinTimeOut.TotalSeconds} Seconds");
-               result = device.Join(true, JoinTimeOut);
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Join start");
+               result = device.Join(true);
                if (result != Result.Success)
                {
-                  Debug.WriteLine($"Join failed {result}");
+                  Console.WriteLine($"Join start failed {result}");
                   return;
                }
-               Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Join finish");
+               Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Join started");
 
-               while (true)
-               {
-#if PAYLOAD_BCD
-                  Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send Timeout:{SendTimeout.TotalSeconds} Seconds payload BCD:{PayloadBcd}");
-#if CONFIRMED
-                  result = device.Send(PayloadBcd, true, SendTimeout);
-#else
-                  result = device.Send(PayloadBcd, false, SendTimeout);
-#endif
-#endif
-
-#if PAYLOAD_BYTES
-                  Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send Timeout:{SendTimeout.TotalSeconds} Seconds payload Bytes:{BitConverter.ToString(PayloadBytes)}");
-#if CONFIRMED
-                  result = device.Send(PayloadBytes, true, SendTimeout);
-#else
-                  result = device.Send(PayloadBytes, false, SendTimeout);
-#endif
-#endif
-                  if (result != Result.Success)
-                  {
-                     Debug.WriteLine($"Send failed {result}");
-                  }
-
-#if LOW_POWER
-                  Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Sleep");
-                  result = device.Sleep();
-                  if (result != Result.Success)
-                  {
-                     Debug.WriteLine($"Sleep failed {result}");
-                     return;
-                  }
-#endif
-
-                  Thread.Sleep(60000);
-
-#if LOW_POWER
-                  Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Wakeup");
-                  result = device.Wakeup();
-                  if (result != Result.Success)
-                  {
-                     Debug.WriteLine($"Wakeup failed {result}");
-                     return;
-                  }
-#endif
-               }
+               Thread.Sleep(Timeout.Infinite);
             }
          }
          catch (Exception ex)
          {
-            Debug.WriteLine(ex.Message);
+            Console.WriteLine(ex.Message);
          }
+      }
+
+      private static void OnJoinCompletionHandler(bool result)
+      {
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Join finished:{result}");
+
+         if (result)
+         {
+            MessageSendTimer.Change(MessageSendTimerDue, MessageSendTimerPeriod);
+         }
+      }
+
+      private static void SendMessageTimerCallback(object state)
+      {
+         Result result;
+         SeeedE5LoRaWANDevice device = (SeeedE5LoRaWANDevice)state;
+#if CONFIRMED
+         Boolean Confirmed = true;
+#else
+         Boolean Confirmed = false;
+#endif
+
+#if LOW_POWER
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Wakeup");
+         result = device.Wakeup();
+         if (result != Result.Success)
+         {
+            Console.WriteLine($"Wakeup failed {result}");
+            return;
+         }
+#endif
+
+#if PAYLOAD_BCD
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send payload BCD:{PayloadBcd}");
+         result = device.Send(PayloadBcd, Confirmed);
+#endif
+
+#if PAYLOAD_BYTES
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send payload Bytes:{BitConverter.ToString(PayloadBytes)}");
+         result = device.Send(PayloadBytes, Confirmed);
+#endif
+         if (result != Result.Success)
+         {
+            Console.WriteLine($"Send failed {result}");
+         }
+
+#if LOW_POWER
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Sleep");
+         result = device.Sleep();
+         if (result != Result.Success)
+         {
+            Console.WriteLine($"Sleep failed {result}");
+            return;
+         }
+#endif
       }
 
 #if CONFIRMED
       static void OnMessageConfirmationHandler(int rssi, double snr)
       {
-         Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send Confirm RSSI:{rssi} SNR:{snr}");
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send Confirm RSSI:{rssi} SNR:{snr}");
       }
 #endif
 
@@ -193,7 +218,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
       {
          byte[] payloadBytes = SeeedE5LoRaWANDevice.BcdToByes(payloadBcd);
 
-         Debug.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Receive Message RSSI:{rssi} SNR:{snr} Port:{port} Payload:{payloadBcd} PayLoadBytes:{BitConverter.ToString(payloadBytes)}");
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Receive Message RSSI:{rssi} SNR:{snr} Port:{port} Payload:{payloadBcd} PayLoadBytes:{BitConverter.ToString(payloadBytes)}");
       }
    }
 }
