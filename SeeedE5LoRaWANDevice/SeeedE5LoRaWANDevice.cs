@@ -22,33 +22,104 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 	using System.Text;
 	using System.Threading;
 
-	public enum LoRaClass
+	/// <summary>
+	/// The LoRaWAN device classes. From The Things Network definitions
+	/// </summary>
+	public enum LoRaWANDeviceClass
 	{
 		Undefined = 0,
+		/// <summary>
+		/// Class A devices support bi-directional communication between a device and a gateway. Uplink messages (from 
+		/// the device to the server) can be sent at any time. The device then opens two receive windows at specified 
+		/// times (RX1 Delay and RX2 Delay) after an uplink transmission. If the server does not respond in either of 
+		/// these receive windows, the next opportunity will be after the next uplink transmission from the device. 
 		A,
+		/// <summary>
+		/// Class B devices extend Class A by adding scheduled receive windows for downlink messages from the server. 
+		/// Using time-synchronized beacons transmitted by the gateway, the devices periodically open receive windows. 
+		/// The time between beacons is known as the beacon period, and the time during which the device is available 
+		/// to receive downlinks is a “ping slot.”
+		/// </summary>
 		B,
+		/// <summary>
+		/// Class C devices extend Class A by keeping the receive windows open unless they are transmitting, as shown 
+		/// in the figure below. This allows for low-latency communication but is many times more energy consuming than 
+		/// Class A devices.
+		/// </summary>
 		C
 	}
 
+	/// <summary>
+	/// Possible results of library methods (combination of Seeed LoRa E5 AT command and state machine errors)
+	/// </summary>
 	public enum Result
 	{
 		Undefined = 0,
+		/// <summary>
+		/// Command executed without error.
+		/// </summary>
 		Success,
-		ATCommandResponseTimeout,
-		JoinFailed,
+		/// <summary>
+		/// Command failed to complete in configured duration.
+		/// </summary>
+		Timeout,
+		/// <summary>
+		///  LoRaWAN transaction service is ongoing.
+		/// </summary>
 		ModemIsBusy,
+		/// <summary>
+		/// LoRaWAN modem is in OTAA mode and not joined a network.
+		/// </summary>
 		NetworkNotJoined,
+		/// <summary>
+		/// LoRaWAN modem is joining a network. 
+		/// </summary>
+		NetworkJoinInProgress,
+		/// <summary>
+		/// LoRaWAN modem has already joined a network.
+		/// </summary>
 		NetworkAlreadyJoined,
-		ErrorIsInvalidFormat,
-		CommandResponseTimeout,
-		CommandIsUnknown,
+		/// <summary>
+		/// All configured channels are occupied by others.
+		/// </summary>
+		NoFreeChannels,
+
+		// Section AT Command Specification Document section 2.4, copy n paste so text might be a bit odd
+		/// <summary>
+		/// The input parameter of the command is invalid.
+		/// </summary>
 		ParameterIsInvalid,
+		/// <summary>
+		/// Command unknown
+		/// </summary>
+		CommandIsUnknown,
+		/// <summary>
+		/// Command is in wrong format
+		/// </summary>
 		CommandIsInWrongFormat,
+		/// <summary>
+		/// Command is unavailable in current mode (Check with "AT+MODE")
+		/// </summary>
 		CommandIsUnavilableInCurrentMode,
-		TooManyParameters,
+		/// <summary>
+		/// Too many parameters. LoRaWAN modem support max 15 parameters
+		/// </summary>
+		CommandHasTooManyParameters,
+		/// <summary>
+		/// Length of command is too long (exceed 528 bytes)
+		/// </summary>
 		CommandIsTooLong,
+		/// <summary>
+		/// Receive end symbol timeout, command must end with <LF>
+		/// </summary>
 		ReceiveEndSymbolTimeout,
+		/// <summary>
+		/// Invalid character received
+		/// </summary>
 		InvalidCharacterReceived,
+		/// <summary>
+		/// Either InvalidCharacterReceived, ReceiveEndSymbolTimeout, CommandIsTooLong
+		/// </summary>
 		CommandError
 	}
 
@@ -126,22 +197,22 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 			return Result.Success;
 		}
 
-		public Result Class(LoRaClass loRaClass)
+		public Result Class(LoRaWANDeviceClass loRaClass)
 		{
 			string command;
 			string response;
 
 			switch (loRaClass)
 			{
-				case LoRaClass.A:
+				case LoRaWANDeviceClass.A:
 					command = "AT+CLASS=A";
 					response = "+CLASS: A";
 					break;
-				case LoRaClass.B:
+				case LoRaWANDeviceClass.B:
 					command = "AT+CLASS=B";
 					response = "+CLASS: B";
 					break;
-				case LoRaClass.C:
+				case LoRaWANDeviceClass.C:
 					command = "AT+CLASS=C";
 					response = "+CLASS: C";
 					break;
@@ -566,7 +637,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 			this.atExpectedEvent.Reset();
 
 			if (!this.atExpectedEvent.WaitOne(CommandTimeoutDefaultmSec, false))
-				return Result.ATCommandResponseTimeout;
+				return Result.Timeout;
 
 			this.CommandExpectedResponse = string.Empty;
 
@@ -667,7 +738,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 							result = Result.NetworkNotJoined;
 							break;
 						case "+JOIN: LoRaWAN modem is busy":
-							result = Result.NetworkAlreadyJoined;
+							result = Result.NetworkJoinInProgress;
 							break;
 						case "+JOIN: Joined already":
 							result = Result.NetworkAlreadyJoined;
@@ -698,7 +769,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 
 					if (line.EndsWith(" ERROR(-20)"))
 					{
-						result = Result.TooManyParameters;
+						result = Result.CommandHasTooManyParameters;
 					}
 
 					if (line.EndsWith(" ERROR(-21)"))
@@ -721,6 +792,10 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 						result = Result.CommandError;
 					}
 
+					if (line.EndsWith(" ERROR(-70)"))
+					{
+						result = Result.NoFreeChannels;
+					}
 
 					if (result != Result.Undefined)
 					{

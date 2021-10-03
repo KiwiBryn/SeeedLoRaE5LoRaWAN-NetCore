@@ -32,7 +32,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
    public class Program
    {
       private const string SerialPortId = "/dev/ttyS0";
-      private const LoRaClass Class = LoRaClass.A;
+      private const LoRaWANDeviceClass Class = LoRaWANDeviceClass.A;
       private const string Region = "AS923";
       private const byte MessagePort = 15;
       private static readonly TimeSpan MessageSendTimerDue = new TimeSpan(0, 0, 15);
