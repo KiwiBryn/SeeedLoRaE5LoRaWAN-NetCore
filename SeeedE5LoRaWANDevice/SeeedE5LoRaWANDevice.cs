@@ -63,6 +63,8 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 		/// Command failed to complete in configured duration.
 		/// </summary>
 		Timeout,
+
+		// Section AT Command Specification Document section 2.4, copy n paste so text might be a bit odd
 		/// <summary>
 		///  LoRaWAN transaction service is ongoing.
 		/// </summary>
@@ -72,17 +74,29 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 		/// </summary>
 		NetworkNotJoined,
 		/// <summary>
+		/// Current DR set data rate is not supported.
+		/// </summary>
+		DataRateError,
+
+		// Section AT Command Specification Document section 4.23, copy n paste so text might be a bit odd
+		/// <summary>
 		/// LoRaWAN modem is joining a network. 
 		/// </summary>
 		NetworkJoinInProgress,
 		/// <summary>
 		/// LoRaWAN modem has already joined a network.
 		/// </summary>
+		
+		// Section AT Command Specification Document section 4.5.2
 		NetworkAlreadyJoined,
 		/// <summary>
 		/// All configured channels are occupied by others.
 		/// </summary>
 		NoFreeChannels,
+
+		// Not certain how to handle these
+		// +MSG: No band in 13469ms 
+		// +MSG: Length error N mpt
 
 		// Section AT Command Specification Document section 2.4, copy n paste so text might be a bit odd
 		/// <summary>
@@ -732,7 +746,10 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 						case "+CMSG: LoRaWAN modem is busy":
 							result = Result.ModemIsBusy;
 							break;
-
+						case "+MSG: DR error":
+						case "+CMSG: DR error":
+							result = Result.DataRateError;
+							break;
 						case "+MSGHEX: Please join network first":
 						case "+CMSGHEX: Please join network first":
 							result = Result.NetworkNotJoined;
