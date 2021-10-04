@@ -21,11 +21,11 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
    public class Config
    {
 #if OTAA
-      public const string AppEui = "00:00:00:00:00:00:00:00";  
+      public const string AppEui = "0000000000000000";  
       public const string AppKey = "01234567890ABCDEF01234567890ABCD";
 #endif
 #if ABP
-      public const string DevAddress = "00:00:00:00";
+      public const string DevAddress = "00000000";
       public const string NwksKey = "01234567890ABCDEF01234567890ABCD";
       public const string AppsKey = "01234567890ABCDEF01234567890ABCD";
 #endif   

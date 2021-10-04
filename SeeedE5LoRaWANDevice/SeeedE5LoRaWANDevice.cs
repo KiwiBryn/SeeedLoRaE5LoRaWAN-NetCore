@@ -142,12 +142,43 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 	public class SeeedE5LoRaWANDevice : IDisposable
 	{
 		public const ushort RegionIDLength = 5;
-		public const ushort AppEuiLength = 23;
+		/// <summary>
+		/// The JoinEUI(formerly known as AppEUI) is a 64-bit globally-unique Extended Unique Identifier (EUI-64).Each 
+		/// Join Server, which is used for authenticating the end-devices, is identified by a 64-bit globally unique 
+		/// identifier, JoinEUI, that is assigned by either the owner or the operator of that server. This is 
+		/// represented by a 16 character long string.
+		/// </summary>
+		public const ushort AppEuiLength = 16;
+		/// <summary>
+		/// The AppKey is the encryption key between the source of the message (based on the DevEUI) and the destination 
+		/// of the message (based on the AppEUI). This key must be unique for each device. This is represented by a 32 
+		/// character long string
+		/// </summary>
 		public const ushort AppKeyLength = 32;
-		public const ushort DevAddrLength = 11;
+		/// <summary>
+		/// The DevAddr is composed of two parts: the address prefix and the network address. The address prefix is 
+		/// allocated by the LoRa Alliance® and is unique to each network that has been granted a NetID. This is 
+		/// represented by an 8 character long string.
+		/// </summary>
+		public const ushort DevAddrLength = 8;
+		/// <summary>
+		/// After activation, the Network Session Key(NwkSKey) is used to secure messages which do not carry a payload.
+		/// </summary>
 		public const ushort NwsKeyLength = 32;
+		/// <summary>
+		/// The AppSKey is an application session key specific for the end-device. It is used by both the application 
+		/// server and the end-device to encrypt and decrypt the payload field of application-specific data messages.
+		/// This is represented by an 32 character long string
+		/// </summary>
 		public const ushort AppsKeyLength = 32;
+		/// <summary>
+		/// The minimum supported port number. Port 0 is used for FRMPayload which contains MAC commands only.
+		/// </summary>
 		public const ushort MessagePortMinimumValue = 1;
+		/// <summary>
+		/// The maximum supported port number. Port 224 is used for the LoRaWAN Mac layer test protocol. Ports 
+		/// 225…255 are reserved for future application extensions.
+		/// </summary>
 		public const ushort MessagePortMaximumValue = 223;
 		public const ushort MessageBytesMaximumLength = 242;
 		public const ushort MessageBcdMaximumLength = 484;
@@ -412,15 +443,32 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 		{
 			Result result;
 
-			if ((devAddr == null) || (devAddr.Length != DevAddrLength))
+			if (devAddr == null)
+			{
+				throw new ArgumentNullException(nameof(devAddr));
+			}
+
+			if (devAddr.Length != DevAddrLength)
 			{
 				throw new ArgumentException($"devAddr invalid length must be {DevAddrLength} characters", nameof(devAddr));
 			}
-			if ((nwksKey == null) || (nwksKey.Length != NwsKeyLength))
+
+			if (nwksKey == null)
 			{
-				throw new ArgumentException($"nwsKey invalid length must be {NwsKeyLength} characters", nameof(nwksKey));
+				throw new ArgumentNullException(nameof(nwksKey));
 			}
-			if ((appsKey == null) || (appsKey.Length != AppsKeyLength))
+
+			if (nwksKey.Length != NwsKeyLength)
+			{
+				throw new ArgumentException($"nwksKey invalid length must be {NwsKeyLength} characters", nameof(nwksKey));
+			}
+
+			if (appsKey == null)
+			{
+				throw new ArgumentNullException(nameof(appsKey));
+			}
+
+			if (appsKey.Length != AppsKeyLength)
 			{
 				throw new ArgumentException($"appsKey invalid length must be {AppsKeyLength} characters", nameof(appsKey));
 			}
@@ -443,9 +491,15 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 #if DIAGNOSTICS
 			Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} AT+ID=DEVADDR,\"{devAddr}\"");
 #endif
-			StringBuilder devAddrWithSpaces = new StringBuilder(devAddr);
+			// Sction 4.3 of AT Command document, the returned AppEUI format has :'s
+			// +ID: DevAddr, xx:xx:xx:xx
+			// Not proud of this, couldn't think of another way todo this which wasn't less obvious.
+			// I really wanted to keeo DevAddr format consistent across all libraries.
+			devAddr = devAddr.Insert(6, ":");
+			devAddr = devAddr.Insert(4, ":");
+			devAddr = devAddr.Insert(2, ":");
 
-			result = SendCommand($"+ID: DevAddr, {devAddr}", $"AT+ID=DEVADDR,\"{devAddrWithSpaces.Replace(':', ' ')}\"");
+			result = SendCommand($"+ID: DevAddr, {devAddr}", $"AT+ID=DEVADDR,\"{devAddr}\"");
 			if (result != Result.Success)
 			{
 #if DIAGNOSTICS
@@ -487,11 +541,22 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 		{
 			Result result;
 
-			if ((appEui == null) || (appEui.Length != AppEuiLength))
+			if (appEui == null)
+			{
+				throw new ArgumentNullException(nameof(appEui));
+			}
+
+			if (appEui.Length != AppEuiLength)
 			{
 				throw new ArgumentException($"appEui invalid length must be {AppEuiLength} characters", nameof(appEui));
 			}
-			if ((appKey == null) || (appKey.Length != AppKeyLength))
+
+			if (appKey == null)
+			{
+				throw new ArgumentNullException(nameof(appKey));
+			}
+
+			if (appKey.Length != AppKeyLength)
 			{
 				throw new ArgumentException($"appKey invalid length must be {AppKeyLength} characters", nameof(appKey));
 			}
@@ -510,9 +575,19 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 #if DIAGNOSTICS
 			Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} AT+ID=APPEUI:{appEui}");
 #endif
-			StringBuilder appEuiWithSpaces = new StringBuilder(appEui);
+			// Sction 4.3 of AT Command document, the returned AppEUI format has :'s
+			// +ID: AppEui, xx:xx:xx:xx:xx:xx:xx:xx
+			// Not proud of this, couldn't think of another way todo this which wasn't less obvious.
+			// I really wanted to keeo AppEUI format consistent across all libraries.
+			appEui = appEui.Insert(14, ":");
+			appEui = appEui.Insert(12, ":");
+			appEui = appEui.Insert(10, ":");
+			appEui = appEui.Insert(8, ":");
+			appEui = appEui.Insert(6, ":");
+			appEui = appEui.Insert(4, ":");
+			appEui = appEui.Insert(2, ":");
 
-			result = SendCommand($"+ID: AppEui, {appEui}", $"AT+ID=APPEUI,\"{appEuiWithSpaces.Replace(':', ' ')}\"");
+			result = SendCommand($"+ID: AppEui, {appEui}", $"AT+ID=APPEUI,\"{appEui}\"");
 			if (result != Result.Success)
 			{
 #if DIAGNOSTICS
@@ -665,6 +740,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 				throw new ArgumentException($"command invalid cannot be empty", nameof(command));
 			}
 
+			this.result = Result.Undefined;
 			this.CommandExpectedResponse = expectedResponse;
 
 			serialDevice.WriteLine(command);
