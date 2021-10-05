@@ -181,10 +181,11 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 		/// </summary>
 		public const ushort MessagePortMaximumValue = 223;
 		public const ushort MessageBytesMaximumLength = 242;
-		public const ushort MessageBcdMaximumLength = 484;
+
 
 		private SerialPort serialDevice = null;
 		private const int CommandTimeoutDefaultmSec = 1500;
+		private const int ReceiveTimeoutDefaultmSec = 10000;
 		private Thread CommandResponsesProcessorThread = null;
 		private Boolean CommandProcessResponses = true;
 		private string CommandExpectedResponse;
@@ -230,7 +231,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 			serialDevice.DataBits = dataBits;
 			serialDevice.NewLine = "\r\n";
 
-			serialDevice.ReadTimeout = CommandTimeoutDefaultmSec;
+			serialDevice.ReadTimeout = ReceiveTimeoutDefaultmSec;
 
 			CommandExpectedResponse = string.Empty;
 
@@ -713,9 +714,9 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 
 			// Send message the network
 #if DIAGNOSTICS
-			Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} Send payload {BytesToBcd(payloadBytes)}");
+			Debug.WriteLine($" {DateTime.UtcNow:hh:mm:ss} Send payload {BytesToHex(payloadBytes)}");
 #endif
-			return Send(BytesToBcd(payloadBytes), confirmed);
+			return Send(BytesToHex(payloadBytes), confirmed);
 		}
 
 		private Result SendCommand(string expectedResponse, string command)
@@ -925,31 +926,49 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 
 		// Utility functions for clients for processing messages payloads to be send, ands messages payloads received.
 
-		public static string BytesToBcd(byte[] payloadBytes)
+		/// <summary>
+		/// Converts an array of byes to a hexadecimal string.
+		/// </summary>
+		/// <param name="payloadBytes"></param>
+		/// <exception cref="ArgumentNullException">The array of bytes is null.</exception>
+		/// <returns>String containing hex encoded bytes</returns>
+		public static string BytesToHex(byte[] payloadBytes)
 		{
-			Debug.Assert(payloadBytes != null);
+			if (payloadBytes == null)
+			{
+				throw new ArgumentNullException(nameof(payloadBytes));
+			}
 
-			StringBuilder payloadBcd = new StringBuilder(BitConverter.ToString(payloadBytes));
-
-			payloadBcd = payloadBcd.Replace("-", "");
-
-			return payloadBcd.ToString();
+			return BitConverter.ToString(payloadBytes).Replace("-", "");
 		}
 
-		public static byte[] BcdToByes(string payloadBcd)
+		/// <summary>
+		/// Converts a hexadecimal string to an array of bytes.
+		/// </summary>
+		/// <param name="payload">array of bytes encoded as hex</param>
+		/// <exception cref="ArgumentNullException">The Hexadecimal string is null.</exception>
+		/// <exception cref="ArgumentException">The Hexadecimal string is not at even number of characters.</exception>
+		/// <exception cref="System.FormatException">The Hexadecimal string contains some invalid characters.</exception>
+		/// <returns>Array of bytes parsed from Hexadecimal string.</returns>
+		public static byte[] HexToByes(string payload)
 		{
-			Debug.Assert(payloadBcd != null);
-			Debug.Assert(payloadBcd != String.Empty);
-			Debug.Assert(payloadBcd.Length % 2 == 0);
-			Byte[] payloadBytes = new byte[payloadBcd.Length / 2];
-			string digits = "0123456789ABCDEF";
+			if (payload == null)
+			{
+				throw new ArgumentNullException(nameof(payload));
+			}
+			if (payload.Length % 2 != 0)
+			{
+				throw new ArgumentException($"Payload invalid length must be an even number", nameof(payload));
+			}
 
-			char[] chars = payloadBcd.ToUpper().ToCharArray();
+			Byte[] payloadBytes = new byte[payload.Length / 2];
+
+			char[] chars = payload.ToCharArray();
 
 			for (int index = 0; index < payloadBytes.Length; index++)
 			{
-				byte byteHigh = (byte)digits.IndexOf(chars[index * 2]);
-				byte byteLow = (byte)digits.IndexOf(chars[(index * 2) + 1]);
+				byte byteHigh = Convert.ToByte(chars[index * 2].ToString(), 16);
+				byte byteLow = Convert.ToByte(chars[(index * 2) + 1].ToString(), 16);
 
 				payloadBytes[index] += (byte)(byteHigh * 16);
 				payloadBytes[index] += byteLow;

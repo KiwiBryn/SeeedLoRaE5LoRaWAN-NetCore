@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 // Must have one of following options defined in the nfproj file
-//    PAYLOAD_BCD or PAYLOAD_BYTES
+//    PAYLOAD_HEX or PAYLOAD_BYTES
 //    OTAA or ABP
 //
 // Optional definitions
@@ -38,8 +38,8 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
       private static readonly TimeSpan MessageSendTimerDue = new TimeSpan(0, 0, 15);
       private static readonly TimeSpan MessageSendTimerPeriod = new TimeSpan(0, 5, 0);
       private static Timer MessageSendTimer;
-#if PAYLOAD_BCD
-      private const string PayloadBcd = "010203040506070809";
+#if PAYLOAD_HEX
+      private const string PayloadHex = "010203040506070809";
 #endif
 #if PAYLOAD_BYTES
       private static readonly byte[] PayloadBytes = { 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
@@ -182,9 +182,9 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
          }
 #endif
 
-#if PAYLOAD_BCD
-         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send payload BCD:{PayloadBcd}");
-         result = device.Send(PayloadBcd, Confirmed);
+#if PAYLOAD_HEX
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Send payload Hex:{PayloadHex}");
+         result = device.Send(PayloadHex, Confirmed);
 #endif
 
 #if PAYLOAD_BYTES
@@ -214,11 +214,11 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
       }
 #endif
 
-      static void OnReceiveMessageHandler(int port, int rssi, double snr, string payloadBcd)
+      static void OnReceiveMessageHandler(int port, int rssi, double snr, string payload)
       {
-         byte[] payloadBytes = SeeedE5LoRaWANDevice.BcdToByes(payloadBcd);
+         byte[] payloadBytes = SeeedE5LoRaWANDevice.HexToByes(payload);
 
-         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Receive Message RSSI:{rssi} SNR:{snr} Port:{port} Payload:{payloadBcd} PayLoadBytes:{BitConverter.ToString(payloadBytes)}");
+         Console.WriteLine($"{DateTime.UtcNow:hh:mm:ss} Receive Message RSSI:{rssi} SNR:{snr} Port:{port} Payload:{payload} PayLoadBytes:{BitConverter.ToString(payloadBytes)}");
       }
    }
 }
