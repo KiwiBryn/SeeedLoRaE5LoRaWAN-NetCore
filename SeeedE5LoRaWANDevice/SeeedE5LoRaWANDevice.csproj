@@ -3,6 +3,15 @@
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
     <RootNamespace>devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5</RootNamespace>
+    <Version>1.0.1</Version>
+    <Authors>Bryn Lewis @KiwiBryn</Authors>
+    <Company>devMobile Software</Company>
+    <Product>SeeedE5 LoRaWAN Library</Product>
+    <Description>Library for Seeed-E5  LoRaWAN module which supports sending &amp; receiving messages, power conservation modes, Adaptive Data Rates(ADR), Activation By Personalisation(ABP), and Over the Air Activation(OTAA).</Description>
+    <Copyright>devMobile Software, Apache License, Version 2.0</Copyright>
+    <RepositoryUrl>https://github.com/KiwiBryn/SeeedLoRaE5LoRaWAN-NetCore</RepositoryUrl>
+    <PackageProjectUrl>https://blog.devmobile.co.nz</PackageProjectUrl>
+    <PackageTags>LoRaWAN,Seeed,Seeed LoRa-E5,dotnetcore, .net, .net-core,dot-net-core</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
