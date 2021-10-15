@@ -177,7 +177,7 @@ namespace devMobile.IoT.LoRaWAN.NetCore.SeeedLoRaE5
 		public const ushort MessagePortMinimumValue = 1;
 		/// <summary>
 		/// The maximum supported port number. Port 224 is used for the LoRaWAN Mac layer test protocol. Ports 
-		/// 225…255 are reserved for future application extensions.
+		/// 223…255 are reserved for future application extensions.
 		/// </summary>
 		public const ushort MessagePortMaximumValue = 223;
 		public const ushort MessageBytesMaximumLength = 242;
